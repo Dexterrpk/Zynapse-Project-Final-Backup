@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Zynapse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .sidebar-link {
+            @apply text-indigo-100 hover:bg-indigo-600 group flex items-center px-2 py-2 text-sm font-medium rounded-md;
+        }
+        .sidebar-link-active {
+            @apply bg-indigo-800 text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md;
+        }
+        .sidebar-link-mobile {
+             @apply text-indigo-100 hover:bg-indigo-600 group flex items-center px-2 py-2 text-base font-medium rounded-md;
+        }
+        .sidebar-link-mobile-active {
+             @apply bg-indigo-800 text-white group flex items-center px-2 py-2 text-base font-medium rounded-md;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div x-data="{
+            sidebarOpen: false,
+            user: { name: 'Carregando...', email: '', logo: null, is_superuser: false },
+            token: null,
+            activeSection: 'dashboard', // Controla a seção ativa
+            fetchUserData() {
+                this.token = localStorage.getItem('zynapse_token');
+                if (!this.token) {
+                    window.location.href = '/frontend/login.html';
+                    return;
+                }
+                fetch('/api/v1/users/me', {
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                })
+                .then(response => {
+                    if (response.status === 401) {
+                        this.logout();
+                        throw new Error('Não autorizado');
+                    }
+                    if (!response.ok) {
+                        throw new Error('Falha ao buscar dados do usuário');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    this.user.name = data.full_name || 'Usuário';
+                    this.user.email = data.email;
+                    this.user.logo = data.custom_logo_url;
+                    this.user.is_superuser = data.is_superuser;
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    if (error.message !== 'Não autorizado') {
+                       // this.logout(); 
+                    }
+                });
+            },
+            logout() {
+                localStorage.removeItem('zynapse_token');
+                window.location.href = '/frontend/login.html';
+            }
+        }" x-init="fetchUserData()">
+        
+        <!-- Overlay for mobile sidebar -->
+        <div x-show="sidebarOpen" class="fixed inset-0 flex z-40 md:hidden" x-cloak>
+            <div @click="sidebarOpen = false" class="fixed inset-0 bg-gray-600 bg-opacity-75" aria-hidden="true"></div>
+            <div class="relative flex-1 flex flex-col max-w-xs w-full bg-indigo-700">
+                <div class="absolute top-0 right-0 -mr-12 pt-2">
+                    <button type="button" @click="sidebarOpen = false" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                        <span class="sr-only">Fechar sidebar</span>
+                        <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                    <div class="flex-shrink-0 flex items-center px-4">
+                        <img class="h-8 w-auto" :src="user.logo || 'https://tailwindui.com/img/logos/workflow-logo-indigo-300-mark-white-text.svg'" alt="Zynapse Logo">
+                    </div>
+                    <nav class="mt-5 px-2 space-y-1">
+                        <a href="#" @click.prevent="activeSection = 'dashboard'; sidebarOpen = false" :class="activeSection === 'dashboard' ? 'sidebar-link-mobile-active' : 'sidebar-link-mobile'">
+                            Dashboard
+                        </a>
+                        <a href="#" @click.prevent="activeSection = 'campaigns'; sidebarOpen = false" :class="activeSection === 'campaigns' ? 'sidebar-link-mobile-active' : 'sidebar-link-mobile'">
+                            Campanhas
+                        </a>
+                        <a href="#" @click.prevent="activeSection = 'ai_training'; sidebarOpen = false" :class="activeSection === 'ai_training' ? 'sidebar-link-mobile-active' : 'sidebar-link-mobile'">
+                            Treinamento IA
+                        </a>
+                        <a href="#" @click.prevent="activeSection = 'settings'; sidebarOpen = false" :class="activeSection === 'settings' ? 'sidebar-link-mobile-active' : 'sidebar-link-mobile'">
+                            Configurações
+                        </a>
+                        <template x-if="user.is_superuser">
+                             <a href="#" @click.prevent="activeSection = 'admin'; sidebarOpen = false" :class="activeSection === 'admin' ? 'sidebar-link-mobile-active' : 'sidebar-link-mobile'">
+                                Admin
+                            </a>
+                        </template>
+                    </nav>
+                </div>
+                <div class="flex-shrink-0 flex border-t border-indigo-800 p-4">
+                    <a href="#" @click.prevent="logout()" class="flex-shrink-0 group block">
+                        <div class="flex items-center">
+                            <div>
+                                <span class="inline-block h-10 w-10 rounded-full overflow-hidden bg-gray-100">
+                                    <svg class="h-full w-full text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-base font-medium text-white" x-text="user.name"></p>
+                                <p class="text-sm font-medium text-indigo-200 group-hover:text-white">Sair</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <div class="flex-shrink-0 w-14" aria-hidden="true"></div>
+        </div>
+
+        <!-- Static sidebar for desktop -->
+        <div class="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+            <div class="flex flex-col flex-grow pt-5 bg-indigo-700 overflow-y-auto">
+                <div class="flex items-center flex-shrink-0 px-4">
+                     <img class="h-8 w-auto" :src="user.logo || 'https://tailwindui.com/img/logos/workflow-logo-indigo-300-mark-white-text.svg'" alt="Zynapse Logo">
+                </div>
+                <div class="mt-5 flex-1 flex flex-col">
+                    <nav class="flex-1 px-2 pb-4 space-y-1">
+                         <a href="#" @click.prevent="activeSection = 'dashboard'" :class="activeSection === 'dashboard' ? 'sidebar-link-active' : 'sidebar-link'">
+                            Dashboard
+                        </a>
+                        <a href="#" @click.prevent="activeSection = 'campaigns'" :class="activeSection === 'campaigns' ? 'sidebar-link-active' : 'sidebar-link'">
+                            Campanhas
+                        </a>
+                        <a href="#" @click.prevent="activeSection = 'ai_training'" :class="activeSection === 'ai_training' ? 'sidebar-link-active' : 'sidebar-link'">
+                            Treinamento IA
+                        </a>
+                        <a href="#" @click.prevent="activeSection = 'settings'" :class="activeSection === 'settings' ? 'sidebar-link-active' : 'sidebar-link'">
+                            Configurações
+                        </a>
+                        <template x-if="user.is_superuser">
+                             <a href="#" @click.prevent="activeSection = 'admin'" :class="activeSection === 'admin' ? 'sidebar-link-active' : 'sidebar-link'">
+                                Admin
+                            </a>
+                        </template>
+                    </nav>
+                </div>
+                 <div class="flex-shrink-0 flex border-t border-indigo-800 p-4">
+                    <a href="#" @click.prevent="logout()" class="flex-shrink-0 w-full group block">
+                        <div class="flex items-center">
+                            <div>
+                                <span class="inline-block h-9 w-9 rounded-full overflow-hidden bg-gray-100">
+                                    <svg class="h-full w-full text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-white" x-text="user.name"></p>
+                                <p class="text-xs font-medium text-indigo-200 group-hover:text-white">Sair</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="md:pl-64 flex flex-col flex-1">
+            <div class="sticky top-0 z-10 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-gray-100">
+                <button type="button" @click="sidebarOpen = true" class="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
+                    <span class="sr-only">Abrir sidebar</span>
+                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+            <main class="flex-1">
+                <div class="py-6">
+                    <!-- Seção Dashboard -->
+                    <div x-show="activeSection === 'dashboard'" x-cloak>
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                            <h1 class="text-2xl font-semibold text-gray-900">Dashboard</h1>
+                        </div>
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                            <div class="py-4">
+                                <div class="border-4 border-dashed border-gray-200 rounded-lg h-96 p-4">
+                                    <p class="text-gray-700">Bem-vindo ao seu painel Zynapse, <span x-text="user.name"></span>!</p>
+                                    <p class="text-gray-600 text-sm mt-2">Email: <span x-text="user.email"></span></p>
+                                    <template x-if="user.is_superuser">
+                                        <p class="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded">Você tem permissões de administrador.</p>
+                                    </template>
+                                    <!-- Conteúdo específico do Dashboard -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção Campanhas -->
+                    <div x-show="activeSection === 'campaigns'" x-cloak>
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                            <h1 class="text-2xl font-semibold text-gray-900">Campanhas</h1>
+                        </div>
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                            <div class="py-4">
+                                <div class="border-4 border-dashed border-gray-200 rounded-lg h-96 p-4">
+                                    <p class="text-gray-500">Gerenciamento de campanhas (conteúdo a ser implementado).</p>
+                                    <!-- Formulários, tabelas, etc. -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção Treinamento IA -->
+                    <div x-show="activeSection === 'ai_training'" x-cloak>
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                            <h1 class="text-2xl font-semibold text-gray-900">Treinamento IA</h1>
+                        </div>
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                            <div class="py-4">
+                                <div class="border-4 border-dashed border-gray-200 rounded-lg h-96 p-4">
+                                    <p class="text-gray-500">Interface para treinar a IA (conteúdo a ser implementado).</p>
+                                    <!-- Upload de arquivos, campos de texto, etc. -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção Configurações -->
+                    <div x-show="activeSection === 'settings'" x-cloak>
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                            <h1 class="text-2xl font-semibold text-gray-900">Configurações</h1>
+                        </div>
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                            <div class="py-4">
+                                <div class="border-4 border-dashed border-gray-200 rounded-lg h-96 p-4">
+                                    <p class="text-gray-500">Configurações da conta e do sistema (conteúdo a ser implementado).</p>
+                                    <!-- Alterar senha, logo, dados da empresa, etc. -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção Admin (Condicional) -->
+                    <template x-if="user.is_superuser">
+                        <div x-show="activeSection === 'admin'" x-cloak>
+                            <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                                <h1 class="text-2xl font-semibold text-gray-900">Administração</h1>
+                            </div>
+                            <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                                <div class="py-4">
+                                    <div class="border-4 border-dashed border-gray-200 rounded-lg h-96 p-4">
+                                        <p class="text-gray-500">Painel de administração (gerenciar usuários, planos, etc. - conteúdo a ser implementado).</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                </div>
+            </main>
+        </div>
+ 
