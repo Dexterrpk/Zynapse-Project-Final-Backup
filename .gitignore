@@ -1,0 +1,30 @@
+# Node
+node_modules/
+.env
+dist/
+build/
+coverage/
+
+# React
+*.log
+*.lock
+*.DS_Store
+.env.local
+.env.development
+.env.production
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Sistema
+*.bak
+*.tmp
+*.cache
+
+# Python (se houver backend paralelo com FastAPI/Django)
+__pycache__/
+*.pyc
+venv/
+whatsapp-bot/.wwebjs_auth/
